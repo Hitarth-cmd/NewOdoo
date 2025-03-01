@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'loginpage.dart'; // Import LoginPage
+import 'loginpage.dart';
+import 'VerifyOTPPage.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -163,7 +164,12 @@ class _SignUpPageState extends State<SignUpPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => VerifyOTPPage()),
+                    );
+                  },
                   child: Text(
                     'SIGNUP',
                     style: TextStyle(
@@ -226,4 +232,5 @@ class _SignUpPageState extends State<SignUpPage> {
       ),
     );
   }
+
 }

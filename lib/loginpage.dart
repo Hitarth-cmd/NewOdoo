@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'signuppage.dart';
+import 'homepage.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -10,14 +10,34 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isError = false; // For error message display
+
+  // Default Credentials
+  final String defaultPhone = "8799403503";
+  final String defaultPassword = "dhruv";
+
+  void _login() {
+    if (_phoneController.text == defaultPhone && _passwordController.text == defaultPassword) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
+    } else {
+      setState(() {
+        _isError = true; // Show error message
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Color(0xFF7AB2D3),
+        backgroundColor: const Color(0xFF7AB2D3),
         title: Row(
           children: [
             Image.asset(
@@ -25,13 +45,13 @@ class _LoginPageState extends State<LoginPage> {
               height: 50,
               width: 50,
             ),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Text(
               'Care Companion',
               style: GoogleFonts.carattere(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF123c5c),
+                color: const Color(0xFF123c5c),
               ),
             ),
           ],
@@ -49,8 +69,8 @@ class _LoginPageState extends State<LoginPage> {
                   height: 180,
                 ),
               ),
-              SizedBox(height: 20),
-              Text(
+              const SizedBox(height: 20),
+              const Text(
                 'Welcome Back,',
                 style: TextStyle(
                   fontSize: 28,
@@ -58,52 +78,40 @@ class _LoginPageState extends State<LoginPage> {
                   color: Color(0xFF123c5c),
                 ),
               ),
-              Text(
+              const Text(
                 'Where Love and Care meet!',
                 style: TextStyle(
                   fontSize: 18,
                   color: Color(0xFF123c5c),
                 ),
               ),
-              SizedBox(height: 20),
-              _buildTextField('Phone Number', Icons.phone),
-              _buildPasswordField('Password', Icons.lock),
-              SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("Don't have an Account? "),
-                  GestureDetector(
-                    onTap: () {
-                      // Navigate to Signup Page
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => SignUpPage()),
-                      );
-                    },
-                    child: Text(
-                      "Signup",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
-                    ),
+              const SizedBox(height: 20),
+
+              _buildTextField('Phone Number', Icons.phone, _phoneController, false),
+              _buildTextField('Password', Icons.lock, _passwordController, true),
+
+              if (_isError)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8.0, left: 5),
+                  child: Text(
+                    "Invalid phone number or password!",
+                    style: TextStyle(color: Colors.red, fontSize: 14),
                   ),
-                ],
-              ),
-              SizedBox(height: 20),
+                ),
+
+              const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF7AB2D3),
+                    backgroundColor: const Color(0xFF7AB2D3),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: () {},
-                  child: Text(
+                  onPressed: _login,
+                  child: const Text(
                     'LOGIN',
                     style: TextStyle(
                       fontSize: 16,
@@ -120,35 +128,19 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildTextField(String hintText, IconData icon) {
+  Widget _buildTextField(String hintText, IconData icon, TextEditingController controller, bool isPassword) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
+        controller: controller,
+        obscureText: isPassword ? _obscurePassword : false,
         decoration: InputDecoration(
           hintText: hintText,
           filled: true,
           fillColor: Colors.grey[200],
           prefixIcon: Icon(icon, color: Colors.grey[600]),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPasswordField(String hintText, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
-        obscureText: _obscurePassword,
-        decoration: InputDecoration(
-          hintText: hintText,
-          filled: true,
-          fillColor: Colors.grey[200],
-          prefixIcon: Icon(icon, color: Colors.grey[600]),
-          suffixIcon: IconButton(
+          suffixIcon: isPassword
+              ? IconButton(
             icon: Icon(
               _obscurePassword ? Icons.visibility_off : Icons.visibility,
               color: Colors.grey[600],
@@ -158,7 +150,8 @@ class _LoginPageState extends State<LoginPage> {
                 _obscurePassword = !_obscurePassword;
               });
             },
-          ),
+          )
+              : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide.none,
