@@ -11,7 +11,7 @@ class MedicineListPage extends StatefulWidget {
 
 class _MedicineListPageState extends State<MedicineListPage> {
   final List<Map<String, dynamic>> _medicines = [];
-  stt.SpeechToText _speech = stt.SpeechToText();
+  final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   String _spokenText = "";
 
@@ -57,6 +57,7 @@ class _MedicineListPageState extends State<MedicineListPage> {
         setState(() {
           _spokenText = result.recognizedWords;
         });
+        _processVoiceCommand(_spokenText);
       });
     }
   }
@@ -66,82 +67,53 @@ class _MedicineListPageState extends State<MedicineListPage> {
     setState(() => _isListening = false);
   }
 
+  void _processVoiceCommand(String command) {
+    List<String> times = ["morning", "afternoon", "night"];
+    List<String> days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+
+    String medicineName = "";
+    String selectedTime = "Morning"; // Default time
+    List<String> selectedDays = [];
+
+    List<String> words = command.toLowerCase().split(" ");
+
+    // Extract medicine name (Assumes first few words are the name)
+    int stopIndex = words.indexWhere((word) => times.contains(word));
+    if (stopIndex == -1) stopIndex = words.length; // No time found, use entire speech as name
+    medicineName = words.sublist(0, stopIndex).join(" ").trim();
+
+    // Extract time
+    for (String word in words) {
+      if (times.contains(word)) {
+        selectedTime = word[0].toUpperCase() + word.substring(1); // Capitalize first letter
+        break;
+      }
+    }
+
+    // Extract days
+    for (String word in words) {
+      if (days.contains(word)) {
+        selectedDays.add(word[0].toUpperCase() + word.substring(1)); // Capitalize first letter
+      }
+    }
+
+    if (medicineName.isNotEmpty) {
+      _addMedicine(medicineName, selectedTime, selectedDays);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Added: $medicineName at $selectedTime on ${selectedDays.join(", ")}')),
+      );
+    }
+  }
+
   void _addMedicine(String name, String time, List<String> days) {
     setState(() {
       _medicines.add({
         "name": name,
         "time": time,
-        "days": days,
+        "days": days.isNotEmpty ? days : ["Everyday"],
       });
     });
     _scheduleNotification(name, time);
-  }
-
-  void _showAddMedicineDialog() {
-    TextEditingController medicineNameController = TextEditingController();
-    String selectedTime = "Morning";
-    List<String> selectedDays = [];
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Add Medicine"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: medicineNameController,
-                decoration: const InputDecoration(labelText: "Medicine Name"),
-              ),
-              const SizedBox(height: 10),
-              DropdownButton<String>(
-                value: selectedTime,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedTime = newValue!;
-                  });
-                },
-                items: ["Morning", "Afternoon", "Night"].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                children: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-                    .map((day) {
-                  return ChoiceChip(
-                    label: Text(day),
-                    selected: selectedDays.contains(day),
-                    onSelected: (selected) {
-                      setState(() {
-                        selected ? selectedDays.add(day) : selectedDays.remove(day);
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () {
-                _addMedicine(medicineNameController.text, selectedTime, selectedDays);
-                Navigator.pop(context);
-              },
-              child: const Text("Add"),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -157,7 +129,9 @@ class _MedicineListPageState extends State<MedicineListPage> {
           ),
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: _showAddMedicineDialog,
+            onPressed: () {
+              _MedicineListPageState();
+            },
           ),
         ],
       ),

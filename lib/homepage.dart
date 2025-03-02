@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:flutter_tts/flutter_tts.dart';
 import 'medicine_list.dart';
 import 'to-do_list.dart';
 import 'news.dart';
 import 'games.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 void main() {
   runApp(const MyApp());
@@ -35,48 +38,17 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late stt.SpeechToText _speech;
-  late FlutterTts _tts;
+  bool _showSettings = false;
+  int _selectedIndex = 0;
+
+  stt.SpeechToText _speechToText = stt.SpeechToText();
   bool _isListening = false;
   String _spokenText = "";
 
-  @override
-  void initState() {
-    super.initState();
-    _speech = stt.SpeechToText();
-    _tts = FlutterTts();
-  }
-
-  void _startListening() async {
-    bool available = await _speech.initialize();
-    if (available) {
-      setState(() => _isListening = true);
-      _speech.listen(onResult: (result) {
-        setState(() {
-          _spokenText = result.recognizedWords;
-        });
-        _processCommand(_spokenText);
-      });
-    }
-  }
-
-  void _stopListening() {
-    _speech.stop();
-    setState(() => _isListening = false);
-  }
-
-  void _processCommand(String command) {
-    command = command.toLowerCase();
-    if (command.contains("medicine")) {
-      _navigateTo(MedicineListPage());
-    } else if (command.contains("list")) {
-      _navigateTo(VoiceTodoScreen());
-    } else if (command.contains("news")) {
-      _navigateTo(NewsScreen());
-    }
-    else if (command.contains("games")) {
-      _navigateTo(GameScreen());
-    }
+  void _toggleSettings() {
+    setState(() {
+      _showSettings = !_showSettings;
+    });
   }
 
   void _navigateTo(Widget page) {
@@ -86,8 +58,43 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _speak(String text) async {
-    await _tts.speak(text);
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+      if (index == 2) {
+        _toggleSettings();
+      }
+    });
+  }
+
+  void _startListening() async {
+    bool available = await _speechToText.initialize();
+    if (available) {
+      setState(() {
+        _isListening = true;
+      });
+      _speechToText.listen(onResult: (result) {
+        setState(() {
+          _spokenText = result.recognizedWords;
+        });
+        if (_spokenText.contains('medicine')) {
+          _navigateTo(MedicineListPage());
+        } else if (_spokenText.contains('list')) {
+          _navigateTo(VoiceTodoScreen());
+        } else if (_spokenText.contains('games')) {
+          _navigateTo(GameScreen());
+        } else if (_spokenText.contains('news')) {
+          _navigateTo(NewsScreen());
+        }
+      });
+    }
+  }
+
+  void _stopListening() {
+    setState(() {
+      _isListening = false;
+    });
+    _speechToText.stop();
   }
 
   @override
@@ -97,7 +104,10 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF7AB2D3),
         elevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Image.asset(
               'assets/Logo.jpg',
@@ -116,13 +126,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
-            onPressed: _isListening ? _stopListening : _startListening,
-          ),
-          const SizedBox(width: 15),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -163,7 +166,7 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.health_and_safety, color: Colors.white, size: 28),
+                        const Icon(Icons.health_and_safety, color: Colors.white, size: 28),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -181,10 +184,11 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 20),
+
+            // Grid View
             Expanded(
               flex: 3,
               child: GridView.builder(
-                padding: const EdgeInsets.only(bottom: 10),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 15,
@@ -197,94 +201,30 @@ class _HomePageState extends State<HomePage> {
                     'assets/medicine.png',
                     'assets/to-do_list.png',
                     'assets/mind_games.png',
-                    'assets/news.png',
-                    // 'assets/family_connect.png',
-                    // 'assets/doctor_appointment.png',
+                    'assets/news.png'
                   ];
-
-                  List<String> titles = [
-                    "Medicine List",
-                    "To-Do List",
-                    "Mind Games",
-                    "News",
-                    // "Family Connect",
-                    // "Doctor Appointment",
-                  ];
-
+                  List<String> titles = ["Medicine List", "To-Do List", "Mind Games", "News"];
                   List<Widget> pages = [
                     MedicineListPage(),
                     VoiceTodoScreen(),
                     GameScreen(),
-                    NewsScreen(),
+                    NewsScreen()
                   ];
 
-                  if (index >= pages.length) {
-                    return GestureDetector(
-                      onTap: () {
-                        _speak("Feature not implemented yet");
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(15),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 4,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Image.asset(images[index], height: 80),
-                            const SizedBox(height: 10),
-                            Text(
-                              titles[index],
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
                   return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => pages[index]),
-                      );
-                    },
+                    onTap: () => _navigateTo(pages[index]),
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 4,
-                            spreadRadius: 2,
-                          ),
-                        ],
+                        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Image.asset(images[index], height: 80),
                           const SizedBox(height: 10),
-                          Text(
-                            titles[index],
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
+                          Text(titles[index], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
@@ -297,14 +237,162 @@ class _HomePageState extends State<HomePage> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color(0xFF7AB2D3),
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.black54,
-        iconSize: 35,
+        selectedItemColor: const Color(0xFF123c5c),
+        unselectedItemColor: const Color(0xFF123c5c),
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: ""),
+          BottomNavigationBarItem(icon: Icon(Icons.home, color: Color(0xFF123c5c)), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications, color: Color(0xFF123c5c)), label: 'Notifications'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings, color: Color(0xFF123c5c)), label: 'Settings'),
         ],
+      ),
+
+      // Adjusted floating action buttons location
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 20, bottom: 80), // Padding added from bottom
+            child: FloatingActionButton(
+              onPressed: () {
+                // Navigate to the SOS Button screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SOSButtonPage()),
+                );
+              },
+              backgroundColor: Colors.red,
+              child: Text(
+                'SOS', // Text replaced for SOS
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 20, bottom: 80), // Padding added from bottom
+            child: FloatingActionButton(
+              onPressed: _isListening ? _stopListening : _startListening,
+              backgroundColor: const Color(0xFF7AB2D3), // Microphone color
+              child: Icon(
+                _isListening ? Icons.mic: Icons.mic_off,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// SOS Button Screen (you can adjust this as needed)
+class SOSButtonPage extends StatefulWidget {
+  @override
+  _SOSButtonPageState createState() => _SOSButtonPageState();
+}
+
+class _SOSButtonPageState extends State<SOSButtonPage> {
+  List<String> savedNumbers = [];
+  bool isSOSActivated = false;
+  bool showCancelButton = false;
+  late Timer _timer;
+  int _countdown = 5; // 5 seconds countdown
+
+  // Load saved SOS numbers from SharedPreferences
+  Future<void> _loadSavedNumbers() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      savedNumbers = prefs.getStringList('sosNumbers') ?? [];
+      isSOSActivated = savedNumbers.isNotEmpty;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedNumbers();
+  }
+
+  // Start the 5-second countdown for SOS activation
+  void _startSOS() {
+    setState(() {
+      showCancelButton = true;
+      _countdown = 5;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_countdown == 0) {
+        _sendSOSMessage();
+        timer.cancel();
+      } else {
+        setState(() {
+          _countdown--;
+        });
+      }
+    });
+  }
+
+  void _cancelSOS() {
+    setState(() {
+      _timer.cancel();
+      showCancelButton = false;
+    });
+  }
+
+  // Send the SOS SMS to saved numbers
+  void _sendSOSMessage() {
+    String message = "This is an emergency. Please help!";
+    if (savedNumbers.isNotEmpty) {
+      for (String number in savedNumbers) {
+        launch('sms:$number?body=$message');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white, // Set background color to white
+      appBar: AppBar(
+        title: const Text("SOS Screen"),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Square button for activating SOS with border radius 10
+            ElevatedButton(
+              onPressed: _startSOS,
+              child: const Text('Activate SOS'),
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20), // Border radius set to 10
+                ),
+                padding: const EdgeInsets.all(40), // Adjust padding for a square shape
+                backgroundColor: Colors.red,
+              ),
+            ),
+            if (showCancelButton)
+              Column(
+                children: [
+                  Text("$_countdown seconds remaining to cancel", style: const TextStyle(fontSize: 20)),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _cancelSOS,
+                    child: const Text('Cancel SOS'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }

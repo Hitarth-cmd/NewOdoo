@@ -12,7 +12,7 @@ class VerifyOTPPage extends StatefulWidget {
 
 class _VerifyOTPPageState extends State<VerifyOTPPage> {
   final TextEditingController _otpController = TextEditingController();
-  final String _predefinedOTP = "123456"; // Set your predefined OTP
+  final String _predefinedOTP = "111111"; // Set your predefined OTP
   bool _isOTPValid = true; // For showing validation errors
 
   void _verifyOTP() {

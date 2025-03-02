@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
+import 'package:flutter_tts/flutter_tts.dart';
 
 class NewsScreen extends StatefulWidget {
   @override
@@ -11,6 +11,7 @@ class NewsScreen extends StatefulWidget {
 class _NewsScreenState extends State<NewsScreen> {
   List articles = [];
   bool isLoading = true;
+  FlutterTts flutterTts = FlutterTts();
 
   @override
   void initState() {
@@ -32,6 +33,18 @@ class _NewsScreenState extends State<NewsScreen> {
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  void _readAloudNews() async {
+    if (articles.isNotEmpty) {
+      String newsText = "Here are the top headlines. ";
+      for (var article in articles) {
+        newsText += "${article['title']}. ";
+      }
+      await flutterTts.speak(newsText);
+    } else {
+      await flutterTts.speak("No news available.");
     }
   }
 
@@ -97,10 +110,17 @@ class _NewsScreenState extends State<NewsScreen> {
   }
 }
 
+
 class NewsDetailScreen extends StatelessWidget {
   final Map article;
+  final FlutterTts flutterTts = FlutterTts(); // Text-to-Speech instance
 
   NewsDetailScreen({required this.article});
+
+  /// 🔊 Read the article's title aloud
+  void _readTitle() async {
+    await flutterTts.speak(article['title'] ?? 'No title available');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -108,6 +128,13 @@ class NewsDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text('News Details', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         centerTitle: true,
+        actions: [
+          if (article['title'] != null) // 🔊 Show only if title exists
+            IconButton(
+              icon: Icon(Icons.volume_up), // Read Aloud Button
+              onPressed: _readTitle,
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
